@@ -26,6 +26,13 @@ class KiteMCPClient:
         if self.client:
             await self.client.__aexit__(exc_type, exc_val, exc_tb)
     
+    async def close(self):
+        """Gracefully close the MCP client connection."""
+        if self.client:
+            # Passing None to __aexit__ to indicate a clean exit
+            await self.client.__aexit__(None, None, None)
+            print("✓ Disconnected from Kite MCP server")
+
     def _extract_text_content(self, result) -> Optional[str]:
         """Extract text content from MCP tool result."""
         if hasattr(result, 'content') and isinstance(result.content, list):
@@ -427,45 +434,48 @@ async def interactive_mode():
         print("  0. exit         - Exit the program")
         print()
         
-        while True:
-            try:
-                choice = input("\n💡 Enter command number or name: ").strip().lower()
+        try:
+            while True:
+                try:
+                    choice = input("\n💡 Enter command number or name: ").strip().lower()
+
+                    if choice in ['0', 'exit', 'quit']:
+                        print("👋 Goodbye!")
+                        break
+                    elif choice in ['1', 'holdings']:
+                        await kite.get_holdings()
                 
-                if choice in ['0', 'exit', 'quit']:
-                    print("👋 Goodbye!")
-                    break
+                    elif choice in ['2', 'positions']:
+                        await kite.get_positions()
                 
-                elif choice in ['1', 'holdings']:
-                    await kite.get_holdings()
+                    elif choice in ['3', 'orders']:
+                        await kite.get_orders()
                 
-                elif choice in ['2', 'positions']:
-                    await kite.get_positions()
+                    elif choice in ['4', 'trades']:
+                        await kite.get_trades()
                 
-                elif choice in ['3', 'orders']:
-                    await kite.get_orders()
+                    elif choice in ['6', 'tools']:
+                        await kite.list_available_tools()
                 
-                elif choice in ['4', 'trades']:
-                    await kite.get_trades()
+                    elif choice in ['7', 'custom']:
+                        tool_name = input("Enter tool name: ").strip()
+                        params_str = input("Enter params as JSON (or leave empty): ").strip()
+                        params = json.loads(params_str) if params_str else {}
+                        result = await kite.call_tool(tool_name, params)
+                        print("\n📤 Result:")
+                        print(kite._format_result(result))
                 
-                elif choice in ['6', 'tools']:
-                    await kite.list_available_tools()
-                
-                elif choice in ['7', 'custom']:
-                    tool_name = input("Enter tool name: ").strip()
-                    params_str = input("Enter params as JSON (or leave empty): ").strip()
-                    params = json.loads(params_str) if params_str else {}
-                    result = await kite.call_tool(tool_name, params)
-                    print("\n📤 Result:")
-                    print(kite._format_result(result))
-                
-                else:
-                    print("❌ Invalid command. Try again.")
+                    else:
+                        print("❌ Invalid command. Try again.")
                     
-            except KeyboardInterrupt:
-                print("\n\n👋 Interrupted. Goodbye!")
-                break
-            except Exception as e:
-                print(f"❌ Error: {e}")
+                except KeyboardInterrupt:
+                    print("\n\n👋 Interrupted. Goodbye!")
+                    break
+                except Exception as e:
+                    print(f"❌ Error: {e}")
+        finally:
+            # Ensure the client is closed on exit
+            await kite.close()
 
 
 async def example_usage():
