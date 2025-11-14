@@ -394,21 +394,24 @@ class KiteMCPClient:
         print(self._format_result(result))
         return result
     
-    async def list_available_tools(self):
+    async def list_available_tools(self, display: bool = True):
         """List all available tools from the MCP server."""
         try:
             if hasattr(self.client, 'list_tools'):
                 tools = await self.client.list_tools()
-                print("\n🔧 Available Tools:")
-                for tool in tools:
-                    tool_name = tool.name if hasattr(tool, 'name') else str(tool)
-                    print(f"  • {tool_name}")
+                if display:
+                    print("\n🔧 Available Tools:")
+                    for tool in tools:
+                        tool_name = tool.name if hasattr(tool, 'name') else str(tool)
+                        print(f"  • {tool_name}")
                 return tools
             else:
-                print("⚠️  Tool listing not available")
+                if display:
+                    print("⚠️  Tool listing not available")
                 return None
         except Exception as e:
-            print(f"❌ Error listing tools: {e}")
+            if display:
+                print(f"❌ Error listing tools: {e}")
             return None
 
 
@@ -420,6 +423,9 @@ async def interactive_mode():
             print("Failed to login. Exiting.")
             return
         
+        available_tools = await kite.list_available_tools(display=False)
+        tool_names = [tool.name for tool in available_tools] if available_tools else []
+
         print("\n" + "="*60)
         print("🚀 Kite MCP Interactive Mode")
         print("="*60)
@@ -465,6 +471,11 @@ async def interactive_mode():
                         print("\n📤 Result:")
                         print(kite._format_result(result))
                 
+                    elif choice in tool_names:
+                        result = await kite.call_tool(choice)
+                        print("\n📤 Result:")
+                        print(kite._format_result(result))
+
                     else:
                         print("❌ Invalid command. Try again.")
                     
